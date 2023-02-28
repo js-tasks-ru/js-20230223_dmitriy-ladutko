@@ -5,5 +5,7 @@
  * @returns {object} - returns the new object
  */
 export const omit = (obj, ...fields) => {
-
+    const composedObj = {...obj};
+    fields.map((item) => delete composedObj[item])
+    return composedObj;
 };
