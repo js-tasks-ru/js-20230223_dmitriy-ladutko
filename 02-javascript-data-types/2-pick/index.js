@@ -6,6 +6,10 @@
  */
 export const pick = (obj, ...fields) => {
     const pickedObj = {};
-    fields.map((item) => pickedObj[item] = obj[item])
+    fields.map((field) => {
+        if (Object.hasOwnProperty.call(obj, field)) {
+            pickedObj[field] = obj[field];
+        }
+    });
     return pickedObj;
 };
