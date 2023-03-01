@@ -5,20 +5,24 @@
  * @returns {string[]}
  */
 export function sortStrings(arr, param = 'asc') {
-    const orders = ['asc', 'desc'];
-    if (orders.includes(param)) {
-        const cloneArr = [...arr];
-        const collator = new Intl.Collator(
-            ['ru', 'en'],
-            {
-                sensitivity: 'case',
-                caseFirst: 'upper'
-            }
-        );
-        cloneArr.sort((a, b) => collator.compare(a, b));
-        return param === 'asc' ? cloneArr : cloneArr.reverse();
-    } else {
-        console.error(`There is no order parameter value "${param}" in the following list:`, orders);
-        return null;
-    }
+    const comparator = getComparator(param);
+    return [...arr].sort(comparator);
 }
+
+const getComparator = (orderParam) => {
+    const orders = ['asc', 'desc'];
+    if (orders.includes(orderParam)) {
+        const collator = getCollator();
+        const reversedComparator = (a, b) => collator.compare(b, a);
+        return orderParam === orders[0] ? collator.compare : reversedComparator;
+    }
+    throw new Error(`There is no order parameter value "${orderParam}" in the following list:`, orders);
+};
+
+const getCollator = () => new Intl.Collator(
+    ['ru', 'en'],
+    {
+        sensitivity: 'case',
+        caseFirst: 'upper'
+    }
+);
