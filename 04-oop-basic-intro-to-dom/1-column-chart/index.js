@@ -69,7 +69,7 @@ export default class ColumnChart {
 
   update(data) {
     this.data = data;
-    document.querySelector('.column-chart__chart').innerHTML = this.getColumnsList();
+    this.element.querySelector('.column-chart__chart').innerHTML = this.getColumnsList();
   }
 
   remove() {
