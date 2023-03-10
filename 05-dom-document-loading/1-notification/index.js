@@ -1,6 +1,6 @@
 export default class NotificationMessage {
 
-  static targetElement;
+  static targetElement = document.body;
 
   constructor(message = '', {duration = 0, type = ''} = {}) {
     this.message = message;
@@ -17,9 +17,6 @@ export default class NotificationMessage {
   }
 
   show(targetElement) {
-    if (!targetElement && !NotificationMessage.targetElement) {
-      NotificationMessage.targetElement = document.body;
-    }
     if (targetElement) {
       NotificationMessage.targetElement = targetElement;
     }
@@ -42,7 +39,7 @@ export default class NotificationMessage {
 
   destroy() {
     this.remove();
-    NotificationMessage.targetElement = null;
+    this.element = null;
   }
 
   getTemplate() {
