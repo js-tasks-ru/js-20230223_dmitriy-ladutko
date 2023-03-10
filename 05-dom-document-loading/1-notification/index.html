@@ -10,6 +10,16 @@
 <script type="module">
   import NotificationMessage from './index.js';
 
+  const btn1 = document.getElementById('btn1');
+
+  const btnWrapper = document.createElement('div');
+  btnWrapper.append(btn1);
+  btnWrapper.style.position = 'fixed';
+  btnWrapper.style.top = '0';
+  btnWrapper.style.right = '0';
+
+  document.body.append(btnWrapper);
+
   btn1.addEventListener('click', () => {
     const notification = new NotificationMessage('Hello World', {
       duration: 2000,
