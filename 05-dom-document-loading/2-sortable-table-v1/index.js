@@ -1,18 +1,18 @@
-const directions = {
-  asc: 1,
-  desc: -1
-};
-
-const compareFunction = (sortType, order, field) => sortType === 'string' ?
-  (row1, row2) => {
-    return directions[order] * row1[field].localeCompare(row2[field],
-      ["ru", "en"],
-      {caseFirst: 'upper'});
-  } :
-  (row1, row2) => directions[order] * (row1[field] - row2[field]);
-
 export default class SortableTable {
   subElements = {};
+  directions = {
+    asc: 1,
+    desc: -1
+  };
+
+  sortTypeToFunction = {
+    string: (order, field) => (row1, row2) => {
+      return this.directions[order] * row1[field].localeCompare(row2[field],
+        ["ru", "en"],
+        {caseFirst: 'upper'});
+    },
+    number: (order, field) => (row1, row2) => this.directions[order] * (row1[field] - row2[field])
+  };
 
   constructor(headerConfig = [], data = []) {
     this.headerConfig = headerConfig;
@@ -123,8 +123,27 @@ export default class SortableTable {
       return;
     }
     const sortType = this.headerConfig.find(columnConfig => columnConfig.id === field).sortType;
-    this.data.sort(compareFunction(sortType, order, field));
+    this.data.sort(this.compareFunction(sortType, order, field));
     this.subElements.body.innerHTML = this.getBodyRows();
+  }
+
+  compareFunction(sortType, order, field) {
+    if (!Object.keys(this.sortTypeToFunction).includes(sortType)) {
+      throw Error(`Unknown sort type: ${sortType}`);
+    }
+    if (!Object.keys(this.directions).includes(order)) {
+      throw Error(`Unknown order value: ${order}`);
+    }
+    const noFieldProductIds = [];
+    this.data.forEach((product) => {
+      if (!Object.keys(product).includes(field)) {
+        noFieldProductIds.push(product.id);
+      }
+    });
+    if (noFieldProductIds.length > 0) {
+      throw Error(`Unknown field value: '${field}' for the following products ids: ${noFieldProductIds}`);
+    }
+    return this.sortTypeToFunction[sortType](order, field);
   }
 
   replaceSortingElement(field, order) {
