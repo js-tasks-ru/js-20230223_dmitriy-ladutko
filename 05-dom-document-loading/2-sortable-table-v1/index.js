@@ -3,6 +3,14 @@ const directions = {
   desc: -1
 };
 
+const compareFunction = (sortType, order, field) => sortType === 'string' ?
+  (row1, row2) => {
+    return directions[order] * row1[field].localeCompare(row2[field],
+      ["ru", "en"],
+      {caseFirst: 'upper'});
+  } :
+  (row1, row2) => directions[order] * (row1[field] - row2[field]);
+
 export default class SortableTable {
   subElements = {};
 
@@ -22,28 +30,6 @@ export default class SortableTable {
     this.subElements.sortingElements = this.getSortingElements();
 
     this.renderArrow();
-  }
-
-  getSubElements() {
-    const result = {};
-    const elements = this.element.querySelectorAll('[data-element]');
-    elements.forEach((el) => {
-      const name = el.dataset.element;
-      result[name] = el;
-    });
-    return result;
-  }
-
-  getSortingElements() {
-    const result = {};
-    const elements = this.element.querySelectorAll('[data-id]');
-    elements.forEach((el) => {
-      if (el.dataset.sortable === 'true') {
-        const name = el.dataset.id;
-        result[name] = el;
-      }
-    });
-    return result;
   }
 
   getTemplate() {
@@ -97,6 +83,27 @@ export default class SortableTable {
     }).join('');
   }
 
+  getSubElements() {
+    return this.getDataElements('element');
+  }
+
+  getSortingElements() {
+    return this.getDataElements('id');
+  }
+
+  getDataElements(property) {
+    const result = {};
+    const elements = this.element.querySelectorAll(`[data-${property}]`);
+    elements.forEach((el) => {
+      if (el.dataset.sortable && el.dataset.sortable === 'false') {
+        return;
+      }
+      const name = el.dataset[property];
+      result[name] = el;
+    });
+    return result;
+  }
+
   renderArrow() {
     const arrowWrapper = document.createElement('div');
     arrowWrapper.innerHTML = this.getArrowTemplate();
@@ -112,37 +119,27 @@ export default class SortableTable {
   }
 
   sort(field, order) {
+    if (!this.replaceSortingElement(field, order)) {
+      return;
+    }
+    const sortType = this.headerConfig.find(columnConfig => columnConfig.id === field).sortType;
+    this.data.sort(compareFunction(sortType, order, field));
+    this.subElements.body.innerHTML = this.getBodyRows();
+  }
+
+  replaceSortingElement(field, order) {
     const sortingElement = this.subElements.sortingElements[field];
     const previousSortingElement =
       this.subElements.header.querySelector('[data-order]');
     if (previousSortingElement === sortingElement && previousSortingElement.dataset.order === order) {
-      return;
+      return false;
     }
     if (previousSortingElement) {
       delete previousSortingElement.dataset.order;
     }
-    sortingElement.appendChild(this.subElements.arrow);
     sortingElement.dataset.order = order;
-    const column = this.headerConfig.find(columnConfig => columnConfig.id === field);
-    const compareFn = column.sortType === 'string'
-      ? this.stringSortFunction
-      : this.numberSortFunction;
-    this.data.sort((row1, row2) => directions[order] * compareFn(row1[field], row2[field]));
-    this.update();
-  }
-
-  stringSortFunction(string1, string2) {
-    return string1.localeCompare(string2,
-      ["ru", "en"],
-      {caseFirst: 'upper'});
-  }
-
-  numberSortFunction(number1, number2) {
-    return number1 - number2;
-  }
-
-  update() {
-    this.subElements.body.innerHTML = this.getBodyRows();
+    sortingElement.appendChild(this.subElements.arrow);
+    return true;
   }
 
   remove() {
