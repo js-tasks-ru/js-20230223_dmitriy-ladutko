@@ -1,7 +1,5 @@
 export default class NotificationMessage {
 
-  static targetElement = document.body;
-
   constructor(message = '', {duration = 0, type = ''} = {}) {
     this.message = message;
     this.duration = duration;
@@ -16,18 +14,17 @@ export default class NotificationMessage {
     this.element = templateWrapper.firstElementChild;
   }
 
-  show(targetElement) {
-    if (targetElement) {
-      NotificationMessage.targetElement = targetElement;
+  show(providedTargetElement) {
+    if (NotificationMessage.previous) {
+      NotificationMessage.previous.destroy();
+      clearTimeout(NotificationMessage.timerId);
     }
-    if (NotificationMessage.targetElement && NotificationMessage.targetElement.querySelector('.notification')) {
-      NotificationMessage.targetElement.querySelector('.notification').remove();
-    }
-
-    NotificationMessage.targetElement.append(this.element);
-
-    setTimeout(() => {
+    NotificationMessage.previous = this;
+    const targetElement = providedTargetElement ? providedTargetElement : document.body;
+    targetElement.append(this.element);
+    NotificationMessage.timerId = setTimeout(() => {
       this.destroy();
+      delete NotificationMessage.previous;
     }, this.duration);
   }
 
