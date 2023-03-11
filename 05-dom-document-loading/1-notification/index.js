@@ -7,36 +7,10 @@ export default class NotificationMessage {
     this.render();
   }
 
-
   render() {
     const templateWrapper = document.createElement('div');
     templateWrapper.innerHTML = this.getTemplate();
     this.element = templateWrapper.firstElementChild;
-  }
-
-  show(providedTargetElement) {
-    if (NotificationMessage.previous) {
-      NotificationMessage.previous.destroy();
-      clearTimeout(NotificationMessage.timerId);
-    }
-    NotificationMessage.previous = this;
-    const targetElement = providedTargetElement ? providedTargetElement : document.body;
-    targetElement.append(this.element);
-    NotificationMessage.timerId = setTimeout(() => {
-      this.destroy();
-      NotificationMessage.previous = null;
-    }, this.duration);
-  }
-
-  remove() {
-    if (this.element) {
-      this.element.remove();
-    }
-  }
-
-  destroy() {
-    this.remove();
-    this.element = null;
   }
 
   getTemplate() {
@@ -51,5 +25,41 @@ export default class NotificationMessage {
         </div>
       </div>
     `;
+  }
+
+  show(providedTargetElement) {
+    this.cleanPreviousAndAssign();
+    this.appendElementToTarget(providedTargetElement);
+    this.assignTimerToDestroy();
+  }
+
+  cleanPreviousAndAssign() {
+    if (NotificationMessage.previous) {
+      NotificationMessage.previous.destroy();
+      clearTimeout(NotificationMessage.timerId);
+    }
+    NotificationMessage.previous = this;
+  }
+
+  appendElementToTarget(targetElement = document.body) {
+    targetElement.append(this.element);
+  }
+
+  assignTimerToDestroy() {
+    NotificationMessage.timerId = setTimeout(() => {
+      this.destroy();
+    }, this.duration);
+  }
+
+  remove() {
+    if (this.element) {
+      this.element.remove();
+    }
+  }
+
+  destroy() {
+    this.remove();
+    this.element = null;
+    NotificationMessage.previous = null;
   }
 }
