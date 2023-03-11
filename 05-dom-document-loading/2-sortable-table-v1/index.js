@@ -122,6 +122,10 @@ export default class SortableTable {
     if (!this.replaceSortingElement(field, order)) {
       return;
     }
+    this.doSortAndDisplay(field, order);
+  }
+
+  doSortAndDisplay(field, order) {
     const sortType = this.headerConfig.find(columnConfig => columnConfig.id === field).sortType;
     this.data.sort(this.compareFunction(sortType, order, field));
     this.subElements.body.innerHTML = this.getBodyRows();
