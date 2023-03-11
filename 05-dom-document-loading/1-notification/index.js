@@ -24,7 +24,7 @@ export default class NotificationMessage {
     targetElement.append(this.element);
     NotificationMessage.timerId = setTimeout(() => {
       this.destroy();
-      delete NotificationMessage.previous;
+      NotificationMessage.previous = null;
     }, this.duration);
   }
 
