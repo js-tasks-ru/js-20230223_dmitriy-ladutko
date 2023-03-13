@@ -1,4 +1,7 @@
 export default class ColumnChart {
+  chartHeight = 50;
+  subElements = {};
+
   constructor({
     data = [],
     label = 'orders',
@@ -8,10 +11,8 @@ export default class ColumnChart {
   } = {}) {
     this.data = data;
     this.label = label;
-    this.value = value;
     this.link = link;
-    this.chartHeight = 50;
-    this.formatHeading = formatHeading;
+    this.value = formatHeading(value);
     this.render();
   }
 
@@ -19,30 +20,29 @@ export default class ColumnChart {
     const tempWrapper = document.createElement('div');
     tempWrapper.innerHTML = this.getTemplate();
     this.element = tempWrapper.firstElementChild;
+    if (this.data.length) {
+      this.element.classList.remove("column-chart_loading");
+    }
+    this.subElements = this.getSubElements();
   }
 
   getTemplate() {
-
-    let columnChartClass = 'column-chart';
-    if (this.data.length === 0) {
-      columnChartClass += ' column-chart_loading';
-    }
-
     const ordersLink = this.label === 'orders'
       ? `<a href="${this.link}" class="column-chart__link">View all</a>`
       : '';
 
     return `
-      <div class="${columnChartClass}" style="--chart-height: ${this.chartHeight}">
+      <div class="column-chart column-chart_loading" style="--chart-height: ${this.chartHeight}">
       <div class="column-chart__title">
         Total ${this.label}
         ${ordersLink}
       </div>
       <div class="column-chart__container">
-        <div data-element="header" class="column-chart__header">${this.formatHeading(this.value)}</div>
+        <div data-element="header" class="column-chart__header">${this.value}</div>
         <div data-element="body" class="column-chart__chart">
             ${this.getColumnsList()}
         </div>
+        <div></div>
       </div>
     </div>
     `;
@@ -67,18 +67,34 @@ export default class ColumnChart {
     });
   }
 
+  getSubElements() {
+    const result = {};
+    const elements = this.element.querySelectorAll("[data-element]");
+    for (const subElement of elements) {
+      const name = subElement.dataset.element;
+      result[name] = subElement;
+    }
+    return result;
+  }
+
   update(data) {
+    if (!data.length) {
+      this.element.classList.add('column-chart_loading');
+    }
     this.data = data;
-    this.element.querySelector('.column-chart__chart').innerHTML = this.getColumnsList();
+    this.subElements.body.innerHTML = this.getColumnsList();
   }
 
   remove() {
-    this.element.remove();
+    if (this.element) {
+      this.element.remove();
+    }
   }
 
   destroy() {
-    const charts = document.querySelectorAll('.column-chart');
-    charts.forEach(el => el.remove());
+    this.remove();
+    this.element = null;
+    this.subElements = {};
   }
 
 }
