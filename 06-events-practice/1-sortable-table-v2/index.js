@@ -30,7 +30,6 @@ export default class SortableTable {
     const element = tableWrapper.firstElementChild;
     this.element = element;
     this.subElements = this.getSubElements(element);
-    console.log(this.subElements);
   }
 
   getTable() {
@@ -155,7 +154,7 @@ export default class SortableTable {
   addHeaderRowsEventListeners(sortingElements = {}) {
     for (const entry of Object.entries(sortingElements)) {
       const [field, element] = entry;
-      element.addEventListener('click', (event) => this.onHeaderClick(event, field, element));
+      element.addEventListener('pointerdown', (event) => this.onHeaderClick(event, field, element));
     }
   }
 
@@ -165,10 +164,10 @@ export default class SortableTable {
   };
 
   getReversedOrder(order) {
-    if (!order) {
-      return this.sorted.order;
-    }
     const [asc, desc] = Object.keys(this.directions);
+    if (!order) {
+      return desc;
+    }
     return order === asc ? desc : asc;
   }
 
