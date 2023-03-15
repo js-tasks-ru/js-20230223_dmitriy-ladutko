@@ -159,9 +159,6 @@ export default class SortableTable {
   }
 
   onHeaderClick = (event, field, element) => {
-    if (event.target.tagName !== 'SPAN') {
-      return;
-    }
     const order = this.getReversedOrder(element.dataset.order);
     this.sort(field, order);
   };
