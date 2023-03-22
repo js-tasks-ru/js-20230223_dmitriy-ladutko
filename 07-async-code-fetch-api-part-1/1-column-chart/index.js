@@ -31,38 +31,46 @@ export default class ColumnChart {
 
   init() {
     if (Object.keys(this.range).length > 0 && this.range.from && this.range.to) {
-      this.update(this.range.from, this.range.to)
-        .then(r => console.log('Fetched!', r))
-        .catch(error => console.error("Didn't fetch", error));
+      this.update(this.range.from, this.range.to);
     }
   }
 
   async update(fromDate, toDate) {
     this.resetData();
+    this.updateTable();
+    const json = await this.fetchData(fromDate, toDate);
+    this.updateData(json);
+    this.updateTable();
+    return json;
+  }
+
+  updateTable() {
+    if (this.data.length) {
+      this.element.classList.remove("column-chart_loading");
+    } else {
+      this.element.classList.add("column-chart_loading");
+    }
+    this.subElements.header.innerHTML = this.getHeader();
+    this.subElements.body.innerHTML = this.getColumnsList();
+  }
+
+  async fetchData(fromDate, toDate) {
     const from = fromDate.toISOString().split('T')[0];
     const to = toDate.toISOString().split('T')[0];
-    const json = await fetchJson(`${this.url}?from=${from}&to=${to}`);
+    return await fetchJson(`${this.url}?from=${from}&to=${to}`);
+  }
+
+  updateData(json) {
     Object.values(json).map(it => {
       this.data.push(it);
       this.value = this.value + it;
     });
-    if (this.data.length) {
-      this.element.classList.remove("column-chart_loading");
-    }
-    this.subElements.header.innerHTML = this.getHeader();
-    this.subElements.body.innerHTML = this.getColumnsList();
-    return json;
   }
 
   render() {
-    console.log(this.data);
-    console.log(this.value);
     const wrapper = document.createElement('div');
     wrapper.innerHTML = this.getTemplate();
     this.element = wrapper.firstElementChild;
-    if (this.data.length) {
-      this.element.classList.remove("column-chart_loading");
-    }
     this.subElements = this.getSubElements();
   }
 
