@@ -5,6 +5,11 @@ const BACKEND_URL = 'https://course-js.javascript.ru';
 export default class SortableTable {
   element;
   subElements = {};
+  data = [];
+  start = 1;
+  step = 20;
+  end = this.start + this.step;
+  loading = false;
 
   onSortClick = async event => {
     const column = event.target.closest('[data-sortable="true"]');
@@ -31,6 +36,21 @@ export default class SortableTable {
       }
 
       this.subElements.body.innerHTML = this.getTableRows(sortedData);
+    }
+  };
+
+  onWindowScroll = async () => {
+    const { bottom } = this.element.getBoundingClientRect();
+    const { id, order } = this.sorted;
+
+    if (bottom < document.documentElement.clientHeight && !this.loading && !this.isSortLocally) {
+      this.start = this.end;
+      this.end = this.start + this.step;
+
+      this.loading = true;
+      const data = await this.sortData(id, order, this.start, this.end);
+      this.update(data);
+      this.loading = false;
     }
   };
 
@@ -141,10 +161,10 @@ export default class SortableTable {
     this.initEventListeners();
   }
 
-  async initRows(data) {
+  initRows(data) {
     if (data.length) {
-      this.element.classList.remove('sortable-table_empty');
       this.data = data;
+      this.element.classList.remove('sortable-table_empty');
       this.subElements.body.innerHTML = this.getTableRows(data);
     } else {
       this.element.classList.add('sortable-table_empty');
@@ -153,6 +173,7 @@ export default class SortableTable {
 
   initEventListeners() {
     this.subElements.header.addEventListener('pointerdown', this.onSortClick);
+    window.addEventListener('scroll', this.onWindowScroll);
   }
 
   async sortData(id, order, start, end) {
@@ -173,19 +194,6 @@ export default class SortableTable {
     return result;
   }
 
-  remove() {
-    if (this.element) {
-      this.element.remove();
-    }
-  }
-
-  destroy() {
-    this.remove();
-
-    this.element = null;
-    this.subElements = {};
-  }
-
   sortOnClient(id, order) {
     const arr = [...this.data];
     const column = this.headerConfig.find(item => item.id === id);
@@ -201,7 +209,7 @@ export default class SortableTable {
       case 'custom':
         return direction * customSorting(a, b);
       default:
-        throw new Error(`Неизвестный тип сортировки ${sortType}`);
+        throw new Error(`Unsupported sort type: ${sortType}`);
       }
     });
   }
@@ -216,6 +224,30 @@ export default class SortableTable {
 
   async loadData(url) {
     return await fetchJson(url);
+  }
+
+  update(data) {
+    const rows = document.createElement('div');
+
+    this.data = [...this.data, ...data];
+    rows.innerHTML = this.getTableRows(data);
+
+    this.subElements.body.append(...rows.childNodes);
+  }
+
+  remove() {
+    if (this.element) {
+      this.element.remove();
+    }
+  }
+
+  destroy() {
+    this.remove();
+
+    this.element = null;
+    this.subElements = {};
+
+    window.removeEventListener('scroll', this.onWindowScroll);
   }
 
 }
