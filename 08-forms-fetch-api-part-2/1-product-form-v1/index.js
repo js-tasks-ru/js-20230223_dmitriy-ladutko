@@ -9,6 +9,16 @@ export default class ProductForm {
   categories = [];
   productData = [];
   subElements = {};
+  defaultProductData = {
+    id: '',
+    description: '',
+    title: '',
+    price: 100,
+    discount: 0,
+    status: 0,
+    quantity: 0,
+    images: []
+  };
 
   constructor(productId) {
     this.productId = productId;
@@ -16,7 +26,9 @@ export default class ProductForm {
 
   getProductUrl(productId) {
     const url = new URL("api/rest/products", BACKEND_URL);
-    url.searchParams.set("id", productId);
+    if (productId) {
+      url.searchParams.set("id", productId);
+    }
     return url;
   }
 
@@ -32,15 +44,18 @@ export default class ProductForm {
   }
 
   async render() {
-    await this.loadData();
+    const [categories, productData] = await this.loadData();
+    this.categories = categories;
+    this.productData = productData[0];
     const templateWrapper = document.createElement('div');
     templateWrapper.innerHTML = this.getTemplate();
     const element = templateWrapper.firstElementChild;
     this.element = element;
 
     this.subElements = this.getSubElements(element);
+    this.setOptions();
 
-    if (this.productData) {
+    if (this.productId) {
       this.renderProductData(this.subElements.productForm);
     }
 
@@ -49,12 +64,13 @@ export default class ProductForm {
   }
 
   async loadData() {
-    this.categories = await fetchJson(this.getCategoriesUrl());
-    if (this.productId) {
-      const productArr = await fetchJson(this.getProductUrl(this.productId));
-      this.productData = productArr[0];
-    }
-    return [this.categories, this.productData];
+    const categoriesUrl = this.getCategoriesUrl();
+    const productUrl = this.getProductUrl(this.productId);
+    const categories = fetchJson(categoriesUrl);
+    const productData = this.productId
+      ? fetchJson(productUrl)
+      : Promise.resolve([this.defaultProductData]);
+    return await Promise.all([categories, productData]);
   }
 
   getTemplate() {
@@ -141,22 +157,51 @@ export default class ProductForm {
   }
 
   getCategoriesPanel() {
-    const options = this.categories.map(category => {
-      return category.subcategories.map(subcategory => {
-        const option = escapeHtml(`${category.title} > ${subcategory.title}`);
-        return `
-          <option value="${subcategory.id}">${option}</option>
-        `;
-      }).join('');
-    }).join('');
     return `
       <div class="form-group form-group__half_left">
         <label class="form-label">Категория</label>
         <select id="subcategory" class="form-control" name="subcategory">
-            ${options}
         </select>
       </div>
     `;
+  }
+
+  setOptions() {
+    this.setSubcategoryOptions();
+    this.setStatusOptions();
+  }
+
+  setSubcategoryOptions() {
+    const subcategorySelect
+      = this.subElements.productForm.querySelector('#subcategory');
+
+    this.categories.forEach(category => {
+      category.subcategories.map(subcategory => {
+        const optionText = `${category.title} > ${subcategory.title}`;
+        const optionValue = subcategory.id;
+        const option = new Option(optionText, optionValue);
+        if (optionValue === this.productData.subcategory) {
+          option.selected = true;
+        }
+        subcategorySelect.append(option);
+      });
+    });
+  }
+
+  setStatusOptions() {
+    const options = [
+      new Option('Активен', '1'),
+      new Option('Неактивен', '0'),
+    ];
+    const statusSelect
+      = this.subElements.productForm.querySelector('#status');
+
+    options.forEach(option => {
+      if (option.value === this.productData.status.toString()) {
+        option.selected = true;
+      }
+    });
+
   }
 
   getPricePanel() {
@@ -188,8 +233,6 @@ export default class ProductForm {
       <div class="form-group form-group__part-half">
         <label class="form-label">Статус</label>
         <select id="status" class="form-control" name="status">
-          <option value="1">Активен</option>
-          <option value="0">Неактивен</option>
         </select>
       </div>
     `;
@@ -232,19 +275,19 @@ export default class ProductForm {
       quantity
     } = this.productData;
 
-    form.querySelector('input[name="title"]').value = title;
-    form.querySelector('textarea[name="description"]').value = description;
-    form.querySelector('input[name="price"]').value = price;
-    form.querySelector('input[name="discount"]').value = discount;
-    form.querySelector('input[name="quantity"]').value = quantity;
+    form.querySelector('#title').value = title;
+    form.querySelector('#description').value = description;
+    form.querySelector('#price').value = price;
+    form.querySelector('#discount').value = discount;
+    form.querySelector('#quantity').value = quantity;
   }
 
   setSelectedOptions(form) {
-    const subcategoriesSelect =
-      form.querySelector('select[name="subcategory"]');
+    // const subcategoriesSelect =
+    //   form.querySelector('#subcategory');
     const statusSelect =
-      form.querySelector('select[name="status"]');
-    this.setSelectedByValue(subcategoriesSelect, this.productData.subcategory);
+      form.querySelector('#status');
+    // this.setSelectedByValue(subcategoriesSelect, this.productData.subcategory);
     this.setSelectedByValue(statusSelect, `${this.productData.status}`);
   }
 
@@ -258,22 +301,27 @@ export default class ProductForm {
   }
 
   initEventListeners() {
-    this.uploadImageButton
-      = this.subElements.productForm.querySelector('button[name="uploadImage"]');
+    this.uploadImageButton = this.subElements.productForm.querySelector('#uploadImage');
+    this.saveButton = this.subElements.productForm.querySelector('#save');
     this.uploadImageButton.addEventListener('click', (event) => {
-      this.uploadImage(event);
+      event.preventDefault();
+      this.uploadImage();
+    });
+    this.saveButton.addEventListener('click', async (event) => {
+      event.preventDefault();
+      await this.save();
     });
   }
 
-  uploadImage = (event) => {
+  uploadImage = () => {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
     this.uploadImageButton.classList.add("is-loading");
     input.addEventListener('change', async () => {
       const imageData = await this.uploadToImgur(input);
-      this.renderImage(imageData);
-      this.save({imageData});
+      this.appendImageToList(imageData);
+      // await this.save({imageData});
       this.uploadImageButton.classList.remove("is-loading");
     });
     input.click();
@@ -281,7 +329,7 @@ export default class ProductForm {
 
   uploadToImgur = async (input) => {
     const formData = new FormData();
-    const image = input.files[0];
+    const [image] = input.files;
     formData.append('image', image);
     const response = await fetchJson(this.getImgurUrl(), {
       method: "POST",
@@ -297,7 +345,7 @@ export default class ProductForm {
     };
   };
 
-  renderImage(data) {
+  appendImageToList(data) {
     const imageWrapper = document.createElement('div');
     imageWrapper.innerHTML = this.getImageRow(data);
     const imagesUl
@@ -318,7 +366,50 @@ export default class ProductForm {
     this.productId = '';
   }
 
-  save(data = {}) {
-    this.element.dispatchEvent(new CustomEvent('product-updated', {detail: data}));
+  async save() {
+    const formData = this.getFormData();
+    const url = this.getProductUrl();
+    const response = await fetchJson(url, {
+      method: this.productId ? 'PUT' : 'PATCH',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(formData)
+    });
+    const {id, subcategory} = response;
+    this.element.dispatchEvent(new CustomEvent(this.productId ? 'product-updated' : 'product-saved', {
+      detail: {
+        id,
+        subcategory
+      }
+    }));
+    return response;
+  }
+
+  getFormData() {
+    const result = {};
+    const numericFields = ['price', 'discount', 'quantity', 'status'];
+    const excludedFields = ['url', 'source'];
+    const formData = new FormData(this.subElements.productForm);
+    const entries = formData.entries();
+    for (let entry of entries) {
+      const [field, value = ''] = entry;
+      if (!excludedFields.includes(field)) {
+        result[field] = numericFields.includes(field) ? Number.parseInt(value) : value;
+      }
+    }
+    this.addImagesToFormData(result);
+    return result;
+  }
+
+  addImagesToFormData(result) {
+    const images = [];
+    const imagesList = this.subElements.productForm.querySelectorAll('li.products-edit__imagelist-item');
+    imagesList.forEach(el => {
+      const url = el.querySelector('input[name="url"]').value;
+      const source = el.querySelector('input[name="source"]').value;
+      images.push({url, source});
+    });
+    result.images = images;
   }
 }
